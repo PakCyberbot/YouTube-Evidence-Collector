@@ -10,10 +10,15 @@ from docx2pdf import convert
 
 
 from libs.ReportGenerator import reportme
+
 # Set up the YouTube Data API client
 # https://googleapis.github.io/google-api-python-client/docs/dyn/youtube_v3.html
-api_key = 'AIzaSyCn91JPROinHSEw08zrWpJIshxnGpoOSI4'  # Replace with your API key
-youtube = build('youtube', 'v3', developerKey=api_key)
+def api_init(secret):
+# 'AIzaSyCn91JPROinHSEw08zrWpJIshxnGpoOSI4'
+    global api_key
+    api_key =  secret # Replace with your API key
+    global youtube
+    youtube = build('youtube', 'v3', developerKey=api_key)
 
 def download_image(url):
     try:
@@ -46,14 +51,15 @@ def scrape_video_info(video_id):
     response = request.execute()
     check = response['items'][0]
     dict_vals = {
+        "video_url": f"https://www.youtube.com/watch?v={check['id']}",   
         "video_name": check["snippet"]["title"],
-        "published_date": check["snippet"]["publishedAt"],
+        "published_date": check["snippet"]["publishedAt"].replace("T"," ").replace("Z"," (UTC)"),
         "duration": check["contentDetails"]["duration"].replace("M", " minutes ").replace("H", " hours").replace("PT","").replace("S"," seconds"),
         "video_description": check["snippet"]["description"],
-        "video_tags": ", ".join(check["snippet"]["tags"]),
+        "video_tags": ", ".join(check["snippet"].get("tags", "NOT AVAILABLE")),
 
         "views": check["statistics"]["viewCount"],
-        "likes": check["statistics"]["likeCount"],
+        "likes": check["statistics"].get("likeCount","HIDDEN"),
         "comments": check["statistics"]["commentCount"],
 
         "thumbnails": check["snippet"]["thumbnails"]["maxres"]["url"],
@@ -75,7 +81,7 @@ def scrape_channel_info(channel_id):
     dict_vals = {
         "channel_description": check["snippet"]["description"],
         "custom_url": check["snippet"]["customUrl"],
-        "channel_creation_date": check["snippet"]["publishedAt"],
+        "channel_creation_date": check["snippet"]["publishedAt"].replace("T"," ").replace("Z"," (UTC)"),
 
         "channel_logo": check["snippet"]["thumbnails"]["high"]["url"],
         

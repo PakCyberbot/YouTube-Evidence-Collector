@@ -1,8 +1,15 @@
+import re, shutil, os
+from datetime import datetime
+from docx2pdf import convert
 from PyQt5.QtWidgets import QMainWindow, QWidget,QStatusBar, QLabel, QLineEdit,QProgressBar, QPushButton, QVBoxLayout, QCheckBox, QHBoxLayout
 from PyQt5.QtGui import QGuiApplication
 from PyQt5.QtCore import Qt, QThread, pyqtSignal
 
 from libs.vid_downloader import download_video
+
+from libs.scraper import scrape_channel_info, scrape_video_info, download_image, api_init
+
+from libs.ReportGenerator import reportme
 #-----------------------  GUI --------------------------------
 # Worker thread for performing scraping
 class WorkerThread(QThread):
@@ -64,7 +71,6 @@ class MainWindow(QMainWindow):
         self.evdnce_chkbx = QCheckBox("Evidence Gathering")
         
         self.scrape_btn = QPushButton("Start Scraping")
-        self.clear_button = QPushButton("Clear")
         self.progress_bar = QProgressBar()
         self.progress_bar.setVisible(False)  # Initially invisible
 
@@ -83,7 +89,6 @@ class MainWindow(QMainWindow):
         main_layout.addLayout(hlayout2)
 
         main_layout.addWidget(self.scrape_btn)
-        main_layout.addWidget(self.clear_button)
         main_layout.addWidget(self.progress_bar)
 
         # Set layout
@@ -92,8 +97,7 @@ class MainWindow(QMainWindow):
         # Connect buttons to functions
         self.evdnce_chkbx.stateChanged.connect(self.toggle_api_input_visibility)
         self.scrape_btn.clicked.connect(self.scraping)
-        self.clear_button.clicked.connect(self.clear_clicked)
-        self.setGeometry(0,0, *percentSize(app,30,60))
+        self.setGeometry(0,0, *percentSize(self.app,30,60))
 
         # Set window properties
         self.setWindowTitle("URL Checker")
@@ -101,8 +105,16 @@ class MainWindow(QMainWindow):
 
     def toggle_api_input_visibility(self,state):
         if state == 2:
-            self.label2.setVisible(True)
-            self.yt_api.setVisible(True)
+            with open("libs/yt_apikey", 'r') as file:
+                # Read the content of the file
+                content = file.read()
+                
+                if content:
+                    self.label2.setVisible(True)
+                    self.label2.setText("Api Key loaded from file")
+                else:
+                    self.label2.setVisible(True)
+                    self.yt_api.setVisible(True)
         else:
             self.label2.setVisible(False)
             self.yt_api.setVisible(False)
@@ -121,12 +133,70 @@ class MainWindow(QMainWindow):
             self.worker.finished.connect(self.scraping_finished)
             self.worker.update_progress.connect(self.update_progress_bar)
             self.worker.start()
-    
+
+            if self.evdnce_chkbx.isChecked() == True:
+                self.data_scrape()
+    def data_scrape(self):
+        # link types
+        # https://www.youtube.com/watch?v=Mc_Rkzy4zuo
+        # https://youtu.be/Mc_Rkzy4zuo?si=oumUfUqlP6n2gpi8
+        # https://www.youtube.com/shorts/LMLBzzlvJs8
+
+        vid_id = self.extract_watch_id(self.url_input.text())
+        # Right now, exception handling isn't implemented so no need to take just watch id
+        # if vid_id == None:
+        #     # then the watch id is already given
+        #     vid_id = self.url_input.text()
+        
+        with open("libs/yt_apikey", 'r') as file:
+            # Read the content of the file
+            content = file.read()
+            
+            if content:
+                # If the file is not empty, remove the newline at the end
+                secret = content.rstrip('\n')
+            else:
+                secret = self.yt_api.text()
+        
+        api_init(secret)
+
+        dict_vals = scrape_video_info(vid_id)
+        dict_vals2 = scrape_channel_info(dict_vals["channel_id"])
+        dict_vals.update(dict_vals2)
+
+        # Get current date and time
+        current_datetime = datetime.utcnow()
+        formatted_datetime = current_datetime.strftime("%Y-%m-%d at %H:%M:%S (UTC)")
+        dict_vals.update({"scrape_datetime":formatted_datetime})
+
+        image_path, temp_dir = download_image(dict_vals['thumbnails'])
+        image_path2, temp_dir2 = download_image(dict_vals['channel_logo'])
+
+        reportme("libs/vid_template.docx",f"Video{vid_id}.docx",dict_vals, {0:image_path,1:image_path2})
+        shutil.rmtree(temp_dir)
+        shutil.rmtree(temp_dir2)
+
+        convert(f"Video{vid_id}.docx", f"Video{vid_id}.pdf")
+        os.remove(f"Video{vid_id}.docx")
+
+    def extract_watch_id(self, link):
+        # Regex pattern to extract watch id from YouTube links
+        pattern = r'(?:https?://)?(?:www\.)?(?:youtube\.com/(?:watch\?v=|shorts/)|youtu\.be/)([\w-]+)'
+        
+        # Search for the watch id in the link
+        match = re.search(pattern, link)
+        
+        # Return the watch id if found, otherwise return None
+        if match:
+            return match.group(1)
+        else:
+            return None 
+        
     def update_progress_bar(self, value):
         self.progress_bar.setValue(value)  # Update progress bar value
-        if value == 100:
-            # Enable the button when the task is finished
-            self.scraping_finished()
+        # if value == 100:
+        #     # Enable the button when the task is finished
+        #     self.scraping_finished()
 
 
     def scraping_finished(self, message):
@@ -143,9 +213,6 @@ class MainWindow(QMainWindow):
         else:
             self.url_input.setToolTip("")  # Clear tooltip if line edit is not empty
             return True
-        
-    def clear_clicked(self):
-        self.url_input.clear()
 
     def center(self):
         qRect = self.frameGeometry()
