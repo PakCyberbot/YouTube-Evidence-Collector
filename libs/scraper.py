@@ -8,6 +8,9 @@ from datetime import datetime
 import locale
 
 from docx2pdf import convert
+from spire.doc import *
+from spire.doc.common import *
+
 import waybackpy
 from libs.vid_downloader import extract_watch_id
 from libs.ReportGenerator import reportme
@@ -15,14 +18,25 @@ from libs.ReportGenerator import reportme
 
 locale.setlocale(locale.LC_ALL, '')
 
-def add_to_wayback(vid_id):
-    
-    new_archive_url = waybackpy.Url(
+def add_to_wayback(vid_id="",ch_id=""):
+    if vid_id != "":
+        new_archive_url = waybackpy.Url(
 
-        url = f"https://www.youtube.com/watch?v={vid_id}",
-        user_agent = "Mozilla/5.0 (Windows NT 5.1; rv:40.0) Gecko/20100101 Firefox/40.0"
+            url = f"https://www.youtube.com/watch?v={vid_id}",
+            user_agent = "Mozilla/5.0 (Windows NT 5.1; rv:40.0) Gecko/20100101 Firefox/40.0"
 
-    ).save()
+        ).save()
+    if ch_id != "":
+        new_archive_url = waybackpy.Url(
+            url = f"https://www.youtube.com/{ch_id}",
+            user_agent = "Mozilla/5.0 (Windows NT 5.1; rv:40.0) Gecko/20100101 Firefox/40.0"
+        ).save()
+        for page in ["videos","shorts","streams","playlists","community"]:
+            # all channel pages
+            waybackpy.Url(
+                url = f"https://www.youtube.com/{ch_id}/{page}",
+                user_agent = "Mozilla/5.0 (Windows NT 5.1; rv:40.0) Gecko/20100101 Firefox/40.0"
+            ).save()
     return new_archive_url
 
 
@@ -66,6 +80,7 @@ def scrape_video_info(video_id):
     response = request.execute()
     check = response['items'][0]
     dict_vals = {
+        "video_id": check['id'],
         "video_url": f"https://www.youtube.com/watch?v={check['id']}",   
         "video_name": check["snippet"]["title"],
         "published_date": check["snippet"]["publishedAt"].replace("T"," ").replace("Z"," (UTC)"),
@@ -108,7 +123,7 @@ def scrape_channel_info(channel_id):
     return dict_vals
    
     
-def list_channel_videos(video_id):
+def list_channel_videos(channel_id):
     videos = []
     next_page_token = None
     while True:
@@ -124,7 +139,31 @@ def list_channel_videos(video_id):
         next_page_token = response.get('nextPageToken')
         if not next_page_token:
             break
-    return videos
+
+    filtered_array_video = []
+    for video_dict in videos:
+        if video_dict['id']['kind'] == "youtube#video":
+            video_info = scrape_video_info(video_dict['id']['videoId'])
+            filtered_array_video.append(
+                {
+                    "video_id": video_dict['id']['videoId'],
+                    "video_url": f"https://www.youtube.com/watch?v={video_dict['id']['videoId']}",   
+                    "video_name": video_dict["snippet"]["title"],
+                    "published_date": video_dict["snippet"]["publishedAt"].replace("T"," ").replace("Z"," (UTC)"),
+                    "duration": video_info["duration"],
+                    "video_description": video_dict["snippet"]["description"],
+                    "video_tags": video_info["video_tags"],
+
+                    "views": video_info["views"],
+                    "likes": video_info["likes"],
+                    "comments": video_info["comments"],
+                    
+                    "Picture": video_dict["snippet"]["thumbnails"]["high"]["url"]
+                }
+                
+            )
+    
+    return filtered_array_video
 
 def vid_comments(video_id):
     # Make a request to get channel details
@@ -155,7 +194,7 @@ def get_video_comments(video_id):
 
     return comments
 
-def data_scrape(url, api_key=None):
+def data_scrape(url, api_key=None, channel_dump=False):
         # link types
         # https://www.youtube.com/watch?v=Mc_Rkzy4zuo
         # https://youtu.be/Mc_Rkzy4zuo?si=oumUfUqlP6n2gpi8
@@ -192,16 +231,45 @@ def data_scrape(url, api_key=None):
         image_path2, temp_dir2 = download_image(dict_vals['channel_logo'])
 
         # captures the video snapshot in wayback machine at the time of scraping
-        wayback_machine_url = add_to_wayback(vid_id)
-        dict_vals.update({"wayback_url":str(wayback_machine_url)})
+        # wayback_machine_url = add_to_wayback(vid_id=vid_id)
+        # dict_vals.update({"wayback_url":str(wayback_machine_url)})
 
         reportme("libs/vid_template.docx",f"Video{vid_id}.docx",dict_vals, {0:image_path,1:image_path2})
         
+        
+        # document = Document()
+        # # Load a Word DOCX file
+        # document.LoadFromFile(f"Video{vid_id}.docx")
+
+        # # Save the file to a PDF file
+        # document.SaveToFile(f"Video{vid_id}.pdf", FileFormat.PDF)
+        # document.Close()
+
+        # convert(f"Video{vid_id}.docx", f"Video{vid_id}.pdf")
+        # os.remove(f"Video{vid_id}.docx")
+
+        if channel_dump == True:
+            print("Channel Dumping started...")
+            custom_url = dict_vals["custom_url"]
+            videos_array = list_channel_videos(dict_vals["channel_id"])
+            # add_to_wayback(ch_id=custom_url)
+            print("Got videos array")
+            sorted_videos_list = sorted(videos_array, key=lambda x: x['published_date'])
+            reportme("libs/ch_template.docx",f"Channel{custom_url}.docx",dict_vals, {0:image_path2},sorted_videos_list)
+            print("completed channel report")
+            # document = Document()
+            # # Load a Word DOCX file
+            # document.LoadFromFile(f"Channel{custom_url}.docx")
+
+            # # Save the file to a PDF file
+            # document.SaveToFile(f"Channel{custom_url}.pdf", FileFormat.PDF)
+            # document.Close()
+
+            # convert(f"Channel{custom_url}.docx", f"Channel{custom_url}.pdf")
+            # os.remove(f"Channel{custom_url}.docx")
+
         shutil.rmtree(temp_dir)
         shutil.rmtree(temp_dir2)
-
-        convert(f"Video{vid_id}.docx", f"Video{vid_id}.pdf")
-        os.remove(f"Video{vid_id}.docx")
 
 if __name__ == "__main__":
 

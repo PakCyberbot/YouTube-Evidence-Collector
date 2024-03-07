@@ -21,6 +21,7 @@ if __name__ == "__main__":
         parser.add_argument("url", help="URL of the YouTube video or  the path to mp4 video")
         parser.add_argument('-k', '--apikey', type=str, help='API key for scraping data')
         parser.add_argument('-e', '--evidence', action='store_true', help='Enable evidence collection')
+        parser.add_argument('-d', '--dump', action='store_true', help='dumps the whole channel of the selected video')
         
         args = parser.parse_args()
         if args.evidence:
@@ -30,8 +31,10 @@ if __name__ == "__main__":
                 if not content and args.apikey == None:
                     print("provide youtube api key using --api-key argument")
                     exit()
-                
-            data_scrape(args.url, args.apikey)
+            if args.dump:
+                data_scrape(args.url, args.apikey, channel_dump=True)
+            else:
+                data_scrape(args.url, args.apikey)
             print(f'>>>>>>>>>>>>>>>> PDF created <<<<<<<<<<<<<<<<"')
 
         try:

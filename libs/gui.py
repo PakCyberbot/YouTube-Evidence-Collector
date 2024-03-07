@@ -156,14 +156,14 @@ class MainWindow(QMainWindow):
             # Disable the scrape button during scraping
             self.scrape_btn.setEnabled(False)
 
-            self.status_bar.showMessage("Scraping for the collection of evidences...")  
-
             if self.evdnce_chkbx.isChecked() == True:
-                print("test1")
-                self.status_bar.showMessage("Scraping for the collection of evidences...")  
-                sleep(1)
-                data_scrape(self.url_input.text(),self.yt_api.text())
-                print("test2")
+                if self.chdump_chkbox.isChecked() == True:
+                    self.status_bar.showMessage("Scraping for the collection of evidences...")  
+                    data_scrape(self.url_input.text(),self.yt_api.text(),channel_dump=True)
+                else:
+                    self.status_bar.showMessage("Scraping for the collection of evidences...")  
+                    data_scrape(self.url_input.text(),self.yt_api.text())
+
 
             self.status_bar.showMessage("Downloading the video...")  
 
