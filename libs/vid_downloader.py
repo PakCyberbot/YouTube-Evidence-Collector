@@ -1,10 +1,23 @@
-import sys
+import sys, re
 from pytube import YouTube
 import os
 import subprocess
 
-#-------------------- YOUTUBE Interaction --------------------------------
 
+#-------------------- YOUTUBE Interaction --------------------------------
+def extract_watch_id(link):
+        # Regex pattern to extract watch id from YouTube links
+        pattern = r'(?:https?://)?(?:www\.)?(?:youtube\.com/(?:watch\?v=|shorts/)|youtu\.be/)([\w-]+)'
+        
+        # Search for the watch id in the link
+        match = re.search(pattern, link)
+        
+        # Return the watch id if found, otherwise return None
+        if match:
+            return match.group(1)
+        else:
+            return None 
+        
 def clean_filename(filename):
     # Replace characters that are not allowed in Windows filenames
     invalid_chars = '<>:"/\\|?*'
@@ -29,6 +42,8 @@ def download_video(video_url, output_path, GuiWorkerThread = None):
     """
     video url or watch id
     """
+    # _default_clients["ANDROID_MUSIC"] = _default_clients["ANDROID"]
+
     if not ("youtube.com" in video_url or "youtu.be" in video_url ):
         video_url = f"https://www.youtube.com/watch?v={video_url}"
 

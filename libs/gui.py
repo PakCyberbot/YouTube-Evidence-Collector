@@ -1,13 +1,16 @@
 import re, shutil, os
+from time import sleep
 from datetime import datetime
 from docx2pdf import convert
-from PyQt5.QtWidgets import QMainWindow, QWidget,QStatusBar, QLabel, QLineEdit,QProgressBar, QPushButton, QVBoxLayout, QCheckBox, QHBoxLayout
+from PyQt5.QtWidgets import QMainWindow, QWidget,QStatusBar,QSizePolicy,QSpacerItem, QLabel, QLineEdit,QProgressBar, QPushButton, QVBoxLayout, QCheckBox, QHBoxLayout, QFrame
 from PyQt5.QtGui import QGuiApplication
 from PyQt5.QtCore import Qt, QThread, pyqtSignal
+from PyQt5.QtCore import QUrl
+from PyQt5.QtGui import QDesktopServices
 
-from libs.vid_downloader import download_video
+from libs.vid_downloader import download_video, extract_watch_id
 
-from libs.scraper import scrape_channel_info, scrape_video_info, download_image, api_init
+from libs.scraper import data_scrape
 
 from libs.ReportGenerator import reportme
 #-----------------------  GUI --------------------------------
@@ -69,8 +72,12 @@ class MainWindow(QMainWindow):
         self.label2.setVisible(False)
         self.yt_api.setVisible(False)
         self.evdnce_chkbx = QCheckBox("Evidence Gathering")
+        self.chdump_chkbox = QCheckBox("Channel Dump")
+
         
         self.scrape_btn = QPushButton("Start Scraping")
+        self.donate_btn = QPushButton("Donate")
+        self.donate_btn.clicked.connect(self.openLink)
         self.progress_bar = QProgressBar()
         self.progress_bar.setVisible(False)  # Initially invisible
 
@@ -78,33 +85,56 @@ class MainWindow(QMainWindow):
         hlayout1 = QHBoxLayout()
         hlayout1.addWidget(self.label1)
         hlayout1.addWidget(self.url_input)
+        hlayout1.addWidget(self.evdnce_chkbx)
+
 
         hlayout2 = QHBoxLayout()
-        hlayout2.addWidget(self.evdnce_chkbx)
         hlayout2.addWidget(self.label2)
         hlayout2.addWidget(self.yt_api)
 
+        self.addon_frame = QWidget()
+
+        hlayout_addons = QHBoxLayout()
+        hlayout_addons.addWidget(self.chdump_chkbox)
+        self.addon_frame.setLayout(hlayout_addons)
+        self.addon_frame.hide()
+        top_spacer = QSpacerItem(50, 50, QSizePolicy.Minimum, QSizePolicy.Expanding)
+        
         main_layout = QVBoxLayout()
+        # main_layout.addItem(top_spacer)
+        main_layout.addStretch(1)
+        main_layout.setContentsMargins(50, 50, 50, 50)
+
         main_layout.addLayout(hlayout1)
+        main_layout.addSpacing(50)
         main_layout.addLayout(hlayout2)
-
+        main_layout.addSpacing(50)
+        main_layout.addWidget(self.addon_frame )
+        main_layout.addSpacing(50)
         main_layout.addWidget(self.scrape_btn)
+        main_layout.addSpacing(50)
+        main_layout.addWidget(self.donate_btn)
+        main_layout.addSpacing(50)
         main_layout.addWidget(self.progress_bar)
-
+        main_layout.addStretch(1)    
         # Set layout
         central_widget.setLayout(main_layout)
-
         # Connect buttons to functions
         self.evdnce_chkbx.stateChanged.connect(self.toggle_api_input_visibility)
         self.scrape_btn.clicked.connect(self.scraping)
         self.setGeometry(0,0, *percentSize(self.app,30,60))
 
         # Set window properties
-        self.setWindowTitle("URL Checker")
+        self.setWindowTitle("YT Evidence Collector")
         self.center()
 
+    def openLink(self):
+        url = QUrl('https://www.buymeacoffee.com/pakcyberbot')
+        QDesktopServices.openUrl(url)
+    
     def toggle_api_input_visibility(self,state):
         if state == 2:
+            self.addon_frame.show()
             with open("libs/yt_apikey", 'r') as file:
                 # Read the content of the file
                 content = file.read()
@@ -113,19 +143,34 @@ class MainWindow(QMainWindow):
                     self.label2.setVisible(True)
                     self.label2.setText("Api Key loaded from file")
                 else:
+                    self.label2.setText("YT API KEY:")
                     self.label2.setVisible(True)
                     self.yt_api.setVisible(True)
         else:
+            self.addon_frame.hide()
             self.label2.setVisible(False)
             self.yt_api.setVisible(False)
 
     def scraping(self):
         if self.check_line_edit() == True:
-            self.progress_bar.setVisible(True)
-
             # Disable the scrape button during scraping
             self.scrape_btn.setEnabled(False)
+
+            self.status_bar.showMessage("Scraping for the collection of evidences...")  
+
+            if self.evdnce_chkbx.isChecked() == True:
+                print("test1")
+                self.status_bar.showMessage("Scraping for the collection of evidences...")  
+                sleep(1)
+                data_scrape(self.url_input.text(),self.yt_api.text())
+                print("test2")
+
+            self.status_bar.showMessage("Downloading the video...")  
+
+            self.progress_bar.setVisible(True)
+
             
+
             # Start worker thread for scraping
             url = self.url_input.text()
             evidence_check = self.evdnce_chkbx.isChecked()
@@ -133,65 +178,12 @@ class MainWindow(QMainWindow):
             self.worker.finished.connect(self.scraping_finished)
             self.worker.update_progress.connect(self.update_progress_bar)
             self.worker.start()
-
-            if self.evdnce_chkbx.isChecked() == True:
-                self.data_scrape()
-    def data_scrape(self):
-        # link types
-        # https://www.youtube.com/watch?v=Mc_Rkzy4zuo
-        # https://youtu.be/Mc_Rkzy4zuo?si=oumUfUqlP6n2gpi8
-        # https://www.youtube.com/shorts/LMLBzzlvJs8
-
-        vid_id = self.extract_watch_id(self.url_input.text())
-        # Right now, exception handling isn't implemented so no need to take just watch id
-        # if vid_id == None:
-        #     # then the watch id is already given
-        #     vid_id = self.url_input.text()
-        
-        with open("libs/yt_apikey", 'r') as file:
-            # Read the content of the file
-            content = file.read()
             
-            if content:
-                # If the file is not empty, remove the newline at the end
-                secret = content.rstrip('\n')
-            else:
-                secret = self.yt_api.text()
-        
-        api_init(secret)
+            
+            
 
-        dict_vals = scrape_video_info(vid_id)
-        dict_vals2 = scrape_channel_info(dict_vals["channel_id"])
-        dict_vals.update(dict_vals2)
+    
 
-        # Get current date and time
-        current_datetime = datetime.utcnow()
-        formatted_datetime = current_datetime.strftime("%Y-%m-%d at %H:%M:%S (UTC)")
-        dict_vals.update({"scrape_datetime":formatted_datetime})
-
-        image_path, temp_dir = download_image(dict_vals['thumbnails'])
-        image_path2, temp_dir2 = download_image(dict_vals['channel_logo'])
-
-        reportme("libs/vid_template.docx",f"Video{vid_id}.docx",dict_vals, {0:image_path,1:image_path2})
-        shutil.rmtree(temp_dir)
-        shutil.rmtree(temp_dir2)
-
-        convert(f"Video{vid_id}.docx", f"Video{vid_id}.pdf")
-        os.remove(f"Video{vid_id}.docx")
-
-    def extract_watch_id(self, link):
-        # Regex pattern to extract watch id from YouTube links
-        pattern = r'(?:https?://)?(?:www\.)?(?:youtube\.com/(?:watch\?v=|shorts/)|youtu\.be/)([\w-]+)'
-        
-        # Search for the watch id in the link
-        match = re.search(pattern, link)
-        
-        # Return the watch id if found, otherwise return None
-        if match:
-            return match.group(1)
-        else:
-            return None 
-        
     def update_progress_bar(self, value):
         self.progress_bar.setValue(value)  # Update progress bar value
         # if value == 100:
@@ -208,10 +200,10 @@ class MainWindow(QMainWindow):
 
     def check_line_edit(self):
         if not self.url_input.text():  # Check if line edit is empty
-            self.url_input.setToolTip("Please enter a URL")  # Set tooltip if line edit is empty
+            # self.url_input.setToolTip("Please enter a URL")  # Set tooltip if line edit is empty
             return False
         else:
-            self.url_input.setToolTip("")  # Clear tooltip if line edit is not empty
+            # self.url_input.setToolTip("")  # Clear tooltip if line edit is not empty
             return True
 
     def center(self):
