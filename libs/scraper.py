@@ -6,6 +6,9 @@ import requests
 import tempfile
 from datetime import datetime
 import locale
+import hashlib
+from tqdm import tqdm
+
 
 from docx2pdf import convert
 from spire.doc import *
@@ -18,8 +21,29 @@ from libs.ReportGenerator import reportme
 
 locale.setlocale(locale.LC_ALL, '')
 
+def calculate_md5(file_path):
+    md5_hash = hashlib.md5()
+
+    with open(file_path, "rb") as file:
+        for chunk in iter(lambda: file.read(4096), b""):
+            md5_hash.update(chunk)
+
+    return md5_hash.hexdigest()
+
+def write_md5_to_file(file_path, content):
+    md5_file_name = f"{file_path}.md5hash"
+
+    if os.path.exists(md5_file_name):
+        with open(md5_file_name, "a") as md5_file:
+            md5_file.write(content)
+    else:
+        with open(md5_file_name, "w") as md5_file:
+            md5_file.write(content)
+
 def add_to_wayback(vid_id="",ch_id=""):
     if vid_id != "":
+        print(f"Creating snapshot in wayback machine of video {vid_id }, It takes some time")
+
         new_archive_url = waybackpy.Url(
 
             url = f"https://www.youtube.com/watch?v={vid_id}",
@@ -27,28 +51,36 @@ def add_to_wayback(vid_id="",ch_id=""):
 
         ).save()
     if ch_id != "":
+        print(f"Creating snapshot in wayback machine of channel {ch_id}, It takes some time")
         new_archive_url = waybackpy.Url(
             url = f"https://www.youtube.com/{ch_id}",
             user_agent = "Mozilla/5.0 (Windows NT 5.1; rv:40.0) Gecko/20100101 Firefox/40.0"
         ).save()
-        for page in ["videos","shorts","streams","playlists","community"]:
-            # all channel pages
-            waybackpy.Url(
-                url = f"https://www.youtube.com/{ch_id}/{page}",
-                user_agent = "Mozilla/5.0 (Windows NT 5.1; rv:40.0) Gecko/20100101 Firefox/40.0"
-            ).save()
+        
+        # for page in ["videos","shorts","streams","playlists","community"]:
+        #     # all channel pages
+        #     print(f"Taking snapshot for the path /{page}")
+        #     waybackpy.Url(
+        #         url = f"https://www.youtube.com/{ch_id}/{page}",
+        #         user_agent = "Mozilla/5.0 (Windows NT 5.1; rv:40.0) Gecko/20100101 Firefox/40.0"
+        #     ).save()
+
+    print(f"Completed wayback snapshot")
+
     return new_archive_url
 
 
 # Set up the YouTube Data API client
 # https://googleapis.github.io/google-api-python-client/docs/dyn/youtube_v3.html
-def api_init(secret):
+def api_init(secret, gui_statusbar=None):
 # 'AIzaSyCn91JPROinHSEw08zrWpJIshxnGpoOSI4'
     global api_key
     api_key =  secret # Replace with your API key
     global youtube
     youtube = build('youtube', 'v3', developerKey=api_key)
 
+    global gui_status
+    gui_status = gui_statusbar
 def download_image(url):
     try:
         # Send a GET request to the URL
@@ -92,7 +124,7 @@ def scrape_video_info(video_id):
         "likes": "{:,}".format(int(check["statistics"].get("likeCount","HIDDEN"))),
         "comments": "{:,}".format(int(check["statistics"]["commentCount"])),
 
-        "thumbnails": check["snippet"]["thumbnails"]["maxres"]["url"],
+        "thumbnails": check["snippet"]["thumbnails"]["high"]["url"],
 
         "channel_id": check["snippet"]["channelId"],
         "channel_name": check["snippet"]["channelTitle"]
@@ -141,11 +173,12 @@ def list_channel_videos(channel_id):
             break
 
     filtered_array_video = []
-    for video_dict in videos:
+    for i, video_dict in enumerate(tqdm(videos, desc="Scraping each videos info", total=len(videos))):
         if video_dict['id']['kind'] == "youtube#video":
+            
             video_info = scrape_video_info(video_dict['id']['videoId'])
             filtered_array_video.append(
-                {
+                {  
                     "video_id": video_dict['id']['videoId'],
                     "video_url": f"https://www.youtube.com/watch?v={video_dict['id']['videoId']}",   
                     "video_name": video_dict["snippet"]["title"],
@@ -194,12 +227,12 @@ def get_video_comments(video_id):
 
     return comments
 
-def data_scrape(url, api_key=None, channel_dump=False):
+def data_scrape(url, api_key=None, channel_dump=False, wayback=False):
         # link types
         # https://www.youtube.com/watch?v=Mc_Rkzy4zuo
         # https://youtu.be/Mc_Rkzy4zuo?si=oumUfUqlP6n2gpi8
         # https://www.youtube.com/shorts/LMLBzzlvJs8
-
+        hashfile_content = ""
         vid_id = extract_watch_id(url)
         # Right now, exception handling isn't implemented so no need to take just watch id
         # if vid_id == None:
@@ -230,12 +263,13 @@ def data_scrape(url, api_key=None, channel_dump=False):
         image_path, temp_dir = download_image(dict_vals['thumbnails'])
         image_path2, temp_dir2 = download_image(dict_vals['channel_logo'])
 
-        # captures the video snapshot in wayback machine at the time of scraping
-        # wayback_machine_url = add_to_wayback(vid_id=vid_id)
-        # dict_vals.update({"wayback_url":str(wayback_machine_url)})
+        if wayback:
+            # captures the video snapshot in wayback machine at the time of scraping
+            wayback_machine_url = add_to_wayback(vid_id=vid_id)
+            dict_vals.update({"wayback_url":str(wayback_machine_url)})
 
         reportme("libs/vid_template.docx",f"Video{vid_id}.docx",dict_vals, {0:image_path,1:image_path2})
-        
+        print(f"Video{vid_id}.docx generated for the video")
         
         # document = Document()
         # # Load a Word DOCX file
@@ -247,16 +281,28 @@ def data_scrape(url, api_key=None, channel_dump=False):
 
         # convert(f"Video{vid_id}.docx", f"Video{vid_id}.pdf")
         # os.remove(f"Video{vid_id}.docx")
+        custom_url = dict_vals["custom_url"]
 
         if channel_dump == True:
             print("Channel Dumping started...")
-            custom_url = dict_vals["custom_url"]
             videos_array = list_channel_videos(dict_vals["channel_id"])
-            # add_to_wayback(ch_id=custom_url)
-            print("Got videos array")
+
+            if wayback:
+                # captures the video snapshot in wayback machine at the time of scraping
+                wayback_machine_url = add_to_wayback(ch_id=custom_url)
+                dict_vals.update({"wayback_url":str(wayback_machine_url)})
+
             sorted_videos_list = sorted(videos_array, key=lambda x: x['published_date'])
+
+            total_videos = len(videos_array)
+            for idx in range(total_videos):
+                sorted_videos_list[idx]['video_number'] = str(idx + 1) 
+
+            print("Now creating docx report of the channel")            
             reportme("libs/ch_template.docx",f"Channel{custom_url}.docx",dict_vals, {0:image_path2},sorted_videos_list)
             print("completed channel report")
+            channel_doc_hash = calculate_md5(f"Channel{custom_url}.docx")
+            hashfile_content += f"Channel{custom_url}.docx: {channel_doc_hash}\n"
             # document = Document()
             # # Load a Word DOCX file
             # document.LoadFromFile(f"Channel{custom_url}.docx")
@@ -267,6 +313,11 @@ def data_scrape(url, api_key=None, channel_dump=False):
 
             # convert(f"Channel{custom_url}.docx", f"Channel{custom_url}.pdf")
             # os.remove(f"Channel{custom_url}.docx")
+
+        # md5 hash addition    
+        video_doc_hash =  calculate_md5(f"Video{vid_id}.docx")
+        hashfile_content += f"Video{vid_id}.docx: {video_doc_hash}\n"
+        write_md5_to_file(f"Channel{custom_url}", hashfile_content)
 
         shutil.rmtree(temp_dir)
         shutil.rmtree(temp_dir2)

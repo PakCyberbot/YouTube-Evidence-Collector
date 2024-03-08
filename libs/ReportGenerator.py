@@ -174,7 +174,6 @@ def reportme(tmpl_path,out_path,data_dict, img_dict=None, array=None):
             content_file.close()
 #--------------- Test --------------------------------
         if r"%array%" in content:
-            print("found array")
             matches = re.findall(r'%array%(.*?)%/array%', content, re.DOTALL)
             
             if matches:
