@@ -6,11 +6,11 @@ from PyQt5.QtWidgets import QMainWindow, QWidget,QStatusBar,QSizePolicy,QSpacerI
 from PyQt5.QtGui import QGuiApplication
 from PyQt5.QtCore import Qt, QThread, pyqtSignal
 from PyQt5.QtCore import QUrl
-from PyQt5.QtGui import QDesktopServices
+from PyQt5.QtGui import QDesktopServices, QIcon, QFont, QFontMetrics, QPixmap
 
 from libs.vid_downloader import download_video, extract_watch_id
 
-from libs.scraper import data_scrape
+from libs.scraper import data_scrape, extract_channel_name
 
 from libs.ReportGenerator import reportme
 #-----------------------  GUI --------------------------------
@@ -53,33 +53,62 @@ class MainWindow(QMainWindow):
     def __init__(self,app):
         super().__init__()
         self.app = app
+        self.only_channel = False
+
+        self.setWindowIcon(QIcon("libs/toollogo.png"))
         self.init_ui()
 
     def init_ui(self):
+        font = QFont("Arial", 10)
+        font_metrics = QFontMetrics(font)
+        preferred_height = font_metrics.height() + 6  # Add some padding
+
+
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
 
         self.status_bar = QStatusBar()
         self.setStatusBar(self.status_bar)
 
+        bannerlabel = QLabel(self)
+
+        # Load the image from file
+        pixmap = QPixmap("libs/banner.png")  # Replace "image.jpg" with the path to your image file
+        
+        scaleed_pixmap = pixmap.scaled(*percentSize(self.app,35,70), aspectRatioMode=True)
+
+        # Set the pixmap to the label
+        bannerlabel.setPixmap(scaleed_pixmap)
+        bannerlabel.setContentsMargins(50, 50, 50, 50)
         # Create widgets
         self.label1 = QLabel("Enter YT Video URL:")
+        self.label1.setFont(font)
         self.url_input = QLineEdit()
+        self.url_input.setMinimumHeight(preferred_height)
+        self.url_input.setFont(font)
 
         self.label2 = QLabel("YT API KEY:")
+        self.label2.setFont(font)
         self.yt_api = QLineEdit()
+        self.yt_api.setFont(font)
         self.yt_api.setEchoMode(QLineEdit.Password)
         self.label2.setVisible(False)
         self.yt_api.setVisible(False)
         self.evdnce_chkbx = QCheckBox("Evidence Gathering")
+        self.evdnce_chkbx.setFont(font)
         self.chdump_chkbox = QCheckBox("Channel Dump")
+        self.chdump_chkbox.setFont(font)
         self.viddown_chkbox = QCheckBox("Video Download")
+        self.viddown_chkbox.setFont(font)
         self.viddown_chkbox.setChecked(True)
         self.wayback_chkbox = QCheckBox("Wayback Snapshot")
+        self.wayback_chkbox.setFont(font)
 
         
         self.scrape_btn = QPushButton("Start Scraping")
-        self.donate_btn = QPushButton("Donate")
+        self.scrape_btn.setFont(font)
+        self.donate_btn = QPushButton("Donate @PakCyberbot to support for more projects")
+        self.donate_btn.setFont(font)
         self.donate_btn.clicked.connect(self.openLink)
         self.progress_bar = QProgressBar()
         self.progress_bar.setVisible(False)  # Initially invisible
@@ -109,7 +138,7 @@ class MainWindow(QMainWindow):
         # main_layout.addItem(top_spacer)
         main_layout.addStretch(1)
         main_layout.setContentsMargins(50, 50, 50, 50)
-
+        main_layout.addWidget(bannerlabel)
         main_layout.addLayout(hlayout1)
         main_layout.addSpacing(50)
         main_layout.addLayout(hlayout2)
@@ -127,7 +156,9 @@ class MainWindow(QMainWindow):
         # Connect buttons to functions
         self.evdnce_chkbx.stateChanged.connect(self.toggle_api_input_visibility)
         self.scrape_btn.clicked.connect(self.scraping)
-        self.setGeometry(0,0, *percentSize(self.app,30,60))
+        self.url_input.editingFinished.connect(self.urlcheck)
+
+        self.setGeometry(0,0, *percentSize(self.app,40,70))
 
         # Set window properties
         self.setWindowTitle("YT Evidence Collector")
@@ -168,10 +199,10 @@ class MainWindow(QMainWindow):
             if self.evdnce_chkbx.isChecked() == True:
                 if self.chdump_chkbox.isChecked() == True:
                     self.status_bar.showMessage("Scraping for the collection of evidences...")  
-                    data_scrape(self.url_input.text(),self.yt_api.text(),channel_dump=True, wayback=wayback_enabled)
+                    data_scrape(self.url_input.text(),self.yt_api.text(),channel_dump=True, wayback=wayback_enabled, only_channel= self.only_channel)
                 else:
                     self.status_bar.showMessage("Scraping for the collection of evidences...")  
-                    data_scrape(self.url_input.text(),self.yt_api.text(), wayback=wayback_enabled)
+                    data_scrape(self.url_input.text(),self.yt_api.text(), wayback=wayback_enabled, only_channel= self.only_channel)
 
                 
 
@@ -224,5 +255,25 @@ class MainWindow(QMainWindow):
         center_point = QGuiApplication.primaryScreen().availableGeometry().center()
         qRect.moveCenter(center_point)
         self.move(qRect.topLeft())
+
+
+    def urlcheck(self):
+        channel_name = extract_channel_name(self.url_input.text())
+        if channel_name is not None:   
+            self.viddown_chkbox.setChecked(False)
+            self.viddown_chkbox.setDisabled(True)
+            self.chdump_chkbox.setChecked(True)
+            self.chdump_chkbox.setDisabled(True)
+            self.evdnce_chkbx.setChecked(True)
+            self.evdnce_chkbx.setDisabled(True)
+            self.only_channel = True
+        else:
+            self.viddown_chkbox.setDisabled(False)
+            self.chdump_chkbox.setDisabled(False)
+            self.evdnce_chkbx.setDisabled(False)
+            self.only_channel = False
+
+            
+            
 
 

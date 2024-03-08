@@ -1,5 +1,6 @@
 import sys, argparse
 from PyQt5.QtWidgets import QApplication
+from PyQt5.QtGui import QIcon
 import qdarktheme
 
 from libs.gui import MainWindow
@@ -10,6 +11,7 @@ if __name__ == "__main__":
     if len(sys.argv) == 1:
         # GUI version
         app = QApplication(sys.argv)
+        app.setWindowIcon(QIcon("libs/toollogo.png"))
         qdarktheme.setup_theme()
 
         window = MainWindow(app)
@@ -18,7 +20,7 @@ if __name__ == "__main__":
     else:
         #CLI Version
         parser = argparse.ArgumentParser(description="Download YouTube video in high resolution.")
-        parser.add_argument("url", help="URL of the YouTube video or  the path to mp4 video")
+        parser.add_argument("url", help="URL of the YouTube video or the channel url")
         parser.add_argument('-k', '--apikey', type=str, help='API key for scraping data')
         parser.add_argument('-e', '--evidence', action='store_true', help='Enable evidence collection')
         parser.add_argument('-d', '--dump', action='store_true', help='dumps the whole channel of the selected video')
