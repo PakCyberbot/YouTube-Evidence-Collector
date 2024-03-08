@@ -17,6 +17,7 @@
   - [GUI / CLI modes](#gui--cli-modes)
     - [CLI Arguments](#cli-arguments)
   - [Example Usage in CLI mode](#example-usage-in-cli-mode)
+  - [Desclaimer](#desclaimer)
 
 
 
@@ -109,3 +110,7 @@ Here are some examples of how to use the tool with different options:
    ```bash
    python your_script.py https://www.youtube.com/watch?v=your_video_id -w
    ```
+
+## Disclaimer:
+
+This tool, the YouTube Evidence Collector, is intended for educational, research, and investigative purposes only. It is not to be used for any illegal activities. Users are responsible for ensuring compliance with all applicable laws and regulations. The creator of this tool does not condone misuse or unauthorized use. By using this tool, you agree to use it responsibly and hold harmless the creators from any liability.
