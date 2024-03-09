@@ -110,7 +110,7 @@ Here are some examples of how to use the tool with different options:
 6. Take a snapshot in Wayback Machine:
    
    ```bash
-   python your_script.py https://www.youtube.com/watch?v=your_video_id -w
+   python YT_evidence_collector.py https://www.youtube.com/watch?v=your_video_id -w
    ```
 
 ## Disclaimer:
