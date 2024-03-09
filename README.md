@@ -17,7 +17,7 @@
   - [GUI / CLI modes](#gui--cli-modes)
     - [CLI Arguments](#cli-arguments)
   - [Example Usage in CLI mode](#example-usage-in-cli-mode)
-  - [Desclaimer](#desclaimer)
+  - [Disclaimer:](#disclaimer)
 
 
 
@@ -58,7 +58,9 @@ pip install -r requirements.txt
 
 ## GUI / CLI modes
 You can utilize this tool in GUI mode by simply executing it without specifying any arguments.
-
+```
+python YT_evidence_collector.py
+```
 ### CLI Arguments
 
 The tool supports the following command-line arguments:
@@ -79,30 +81,30 @@ Here are some examples of how to use the tool with different options:
 1. Download a YouTube video:
    
    ```bash
-   python your_script.py <video/channel url>
+   python YT_evidence_collector.py <video/channel url>
    ```
 
 2. Download a YouTube video with API key and Enable evidence collection:
    
    ```bash
-   python your_script.py https://www.youtube.com/watch?v=your_video_id -k your_api_key -e
+   python YT_evidence_collector.py https://www.youtube.com/watch?v=your_video_id -k your_api_key -e
    ```
 3. : Download a YouTube video with evidence collection, if the api key is provided in the file.
    
    ```bash
-   python your_script.py https://www.youtube.com/watch?v=your_video_id -e
+   python YT_evidence_collector.py https://www.youtube.com/watch?v=your_video_id -e
    ```
 
 4. Dump the whole channel of the selected video:
    
    ```bash
-   python your_script.py https://www.youtube.com/watch?v=your_video_id -d
+   python YT_evidence_collector.py https://www.youtube.com/watch?v=your_video_id -d
    ```
 
 5. Disable video downloading:
    
    ```bash
-   python your_script.py https://www.youtube.com/watch?v=your_video_id -n
+   python YT_evidence_collector.py https://www.youtube.com/watch?v=your_video_id -n
    ```
 
 6. Take a snapshot in Wayback Machine:
