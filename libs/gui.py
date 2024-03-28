@@ -105,7 +105,7 @@ class MainWindow(QMainWindow):
         self.wayback_chkbox.setFont(font)
 
         
-        self.scrape_btn = QPushButton("Start Scraping")
+        self.scrape_btn = QPushButton("Start Downloading")
         self.scrape_btn.setFont(font)
         self.donate_btn = QPushButton("Donate @PakCyberbot to support for more projects")
         self.donate_btn.setFont(font)
@@ -170,6 +170,7 @@ class MainWindow(QMainWindow):
     
     def toggle_api_input_visibility(self,state):
         if state == 2:
+            self.scrape_btn.setText("Start Scraping")
             self.addon_frame.show()
             with open("libs/yt_apikey", 'r') as file:
                 # Read the content of the file
@@ -183,6 +184,7 @@ class MainWindow(QMainWindow):
                     self.label2.setVisible(True)
                     self.yt_api.setVisible(True)
         else:
+            self.scrape_btn.setText("Start Downloading")
             self.addon_frame.hide()
             self.label2.setVisible(False)
             self.yt_api.setVisible(False)
