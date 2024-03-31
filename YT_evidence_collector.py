@@ -24,6 +24,7 @@ if __name__ == "__main__":
         parser.add_argument('-k', '--apikey', type=str, help='API key for scraping data')
         parser.add_argument('-e', '--evidence', action='store_true', help='Enable evidence collection')
         parser.add_argument('-d', '--dump', action='store_true', help='dumps the whole channel of the selected video')
+        parser.add_argument('-b', '--bulkvideos', action='store_true', help='Bulk video download of the channel')
         parser.add_argument('-n', '--nodownload', action='store_true', help='video downloading disabled')
         parser.add_argument('-w', '--wayback', action='store_true', help='Take snapshot in wayback machine')
         
@@ -37,7 +38,7 @@ if __name__ == "__main__":
                     print("provide youtube api key using --api-key argument")
                     exit()
 
-            data_scrape(args.url, args.apikey, channel_dump=args.dump, wayback=args.wayback)
+            data_scrape(args.url, args.apikey, channel_dump=args.dump, wayback=args.wayback, bulk_vid_down=args.bulkvideos)
         
         try:
             if not args.nodownload:

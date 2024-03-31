@@ -32,11 +32,12 @@ pip install -r requirements.txt
 - Collects data about all videos in a channel
 - Takes snapshots of videos/channels in the Wayback Machine
 - Generates a DOCX file with the collected data
+- Ability to download age-restricted videos \[**NEW**\]
+- Bulk video download during channel dump \[**NEW**\]
+  
 
 #### Upcoming Features
 - Collect comments for videos
-- Ability to download age-restricted videos
-- Bulk video download during channel dump
 - Collect additional information about channels such as playlists, community posts, and separate shorts, live streams, and playlists in their own sections in the DOCX file
 - Take screenshots of entire YouTube video/channel pages
 - Implement Google API quota check before channel dump
@@ -73,6 +74,7 @@ The tool supports the following command-line arguments:
 | `-d`, `--dump`        | Dump the whole channel of the selected video.                        |
 | `-n`, `--nodownload`  | Disable video downloading.                                           |
 | `-w`, `--wayback`     | Take a snapshot in Wayback Machine.                                  |
+| `-b`, `--bulkvideos`     | Download all channel videos                               |
 
 ## Example Usage in CLI mode
 

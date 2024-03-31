@@ -5,4 +5,4 @@ pytube==15.0.0
 Requests==2.31.0
 tqdm==4.65.0
 waybackpy==3.0.6
-pyqtdarktheme
+yt_dlp==2024.3.10
