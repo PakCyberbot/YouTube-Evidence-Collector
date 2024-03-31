@@ -1,4 +1,5 @@
 import re, shutil, os
+
 from time import sleep
 from datetime import datetime
 from docx2pdf import convert
@@ -13,6 +14,7 @@ from libs.vid_downloader import download_video, extract_watch_id
 from libs.scraper import data_scrape, extract_channel_name
 
 from libs.ReportGenerator import reportme
+
 #-----------------------  GUI --------------------------------
 # Worker thread for performing scraping
 class DownloadThread(QThread):
@@ -98,7 +100,7 @@ class MainWindow(QMainWindow):
         self.evdnce_chkbx.setFont(font)
         self.chdump_chkbox = QCheckBox("Channel Dump")
         self.chdump_chkbox.setFont(font)
-        self.viddown_chkbox = QCheckBox("Video Download")
+        self.viddown_chkbox = QCheckBox("Video/s Download")
         self.viddown_chkbox.setFont(font)
         self.viddown_chkbox.setChecked(True)
         self.wayback_chkbox = QCheckBox("Wayback Snapshot")
@@ -158,6 +160,8 @@ class MainWindow(QMainWindow):
         self.scrape_btn.clicked.connect(self.scraping)
         self.url_input.editingFinished.connect(self.urlcheck)
 
+        self.chdump_chkbox.stateChanged.connect(self.toggle_vid_down)
+
         self.setGeometry(0,0, *percentSize(self.app,40,70))
 
         # Set window properties
@@ -188,8 +192,22 @@ class MainWindow(QMainWindow):
             self.addon_frame.hide()
             self.label2.setVisible(False)
             self.yt_api.setVisible(False)
+ 
+    def toggle_vid_down(self,state):
+        if state == 2:
+            self.viddown_chkbox.setText("Bulk Video Download")
+            self.viddown_chkbox.setChecked(False)
+        else:
+            self.viddown_chkbox.setText("Video Download")
+            self.viddown_chkbox.setChecked(True)
+
 
     def scraping(self):
+
+        bulk_vids = False
+        if self.viddown_chkbox.text() == "Bulk Video Download":
+            bulk_vids = self.viddown_chkbox.isChecked()
+
         if self.check_line_edit() == True:
             # Disable the scrape button during scraping
             self.scrape_btn.setEnabled(False)
@@ -201,10 +219,10 @@ class MainWindow(QMainWindow):
             if self.evdnce_chkbx.isChecked() == True:
                 if self.chdump_chkbox.isChecked() == True:
                     self.status_bar.showMessage("Scraping for the collection of evidences...")  
-                    data_scrape(self.url_input.text(),self.yt_api.text(),channel_dump=True, wayback=wayback_enabled, only_channel= self.only_channel)
+                    data_scrape(self.url_input.text(),self.yt_api.text(),channel_dump=True, wayback=wayback_enabled, only_channel= self.only_channel, bulk_vid_down=bulk_vids)
                 else:
                     self.status_bar.showMessage("Scraping for the collection of evidences...")  
-                    data_scrape(self.url_input.text(),self.yt_api.text(), wayback=wayback_enabled, only_channel= self.only_channel)
+                    data_scrape(self.url_input.text(),self.yt_api.text(), wayback=wayback_enabled, only_channel= self.only_channel, bulk_vid_down=bulk_vids)
 
                 
 
@@ -213,7 +231,7 @@ class MainWindow(QMainWindow):
             self.progress_bar.setVisible(True)
 
             
-            if self.viddown_chkbox.isChecked() == True:
+            if self.viddown_chkbox.isChecked() == True and self.viddown_chkbox.text() != "Bulk Video Download":
                 # Start worker thread for downloading
                 url = self.url_input.text()
                 evidence_check = self.evdnce_chkbx.isChecked()
@@ -262,16 +280,16 @@ class MainWindow(QMainWindow):
     def urlcheck(self):
         channel_name = extract_channel_name(self.url_input.text())
         if channel_name is not None:   
-            self.viddown_chkbox.setChecked(False)
-            self.viddown_chkbox.setDisabled(True)
+            self.toggle_vid_down(2)
             self.chdump_chkbox.setChecked(True)
             self.chdump_chkbox.setDisabled(True)
             self.evdnce_chkbx.setChecked(True)
             self.evdnce_chkbx.setDisabled(True)
             self.only_channel = True
         else:
-            self.viddown_chkbox.setDisabled(False)
+            self.toggle_vid_down(1)
             self.chdump_chkbox.setDisabled(False)
+            self.chdump_chkbox.setChecked(False)
             self.evdnce_chkbx.setDisabled(False)
             self.only_channel = False
 

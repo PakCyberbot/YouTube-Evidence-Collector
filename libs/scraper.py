@@ -8,6 +8,7 @@ from datetime import datetime
 import locale
 import hashlib
 from tqdm import tqdm
+from pathlib import Path
 
 
 # from docx2pdf import convert
@@ -17,7 +18,7 @@ from tqdm import tqdm
 import waybackpy
 # import asyncio
 # from pyppeteer import launch
-from libs.vid_downloader import extract_watch_id
+from libs.vid_downloader import extract_watch_id, download_video
 from libs.ReportGenerator import reportme
 
 
@@ -264,7 +265,7 @@ def get_video_comments(video_id):
 
     return comments
 
-def data_scrape(url, api_key=None, channel_dump=False, wayback=False, only_channel=False):
+def data_scrape(url, api_key=None, channel_dump=False, wayback=False, only_channel=False, bulk_vid_down=False):
         
         with open("libs/yt_apikey", 'r') as file:
                 # Read the content of the file
@@ -281,9 +282,9 @@ def data_scrape(url, api_key=None, channel_dump=False, wayback=False, only_chann
         
         if only_channel == False:
             # link types
-            # https://www.youtube.com/watch?v=Mc_Rkzy4zuo
-            # https://youtu.be/Mc_Rkzy4zuo?si=oumUfUqlP6n2gpi8
-            # https://www.youtube.com/shorts/LMLBzzlvJs8
+            # https://www.youtube.com/watch?v=<watch_id>
+            # https://youtu.be/<watch_id>?si=oumUfUqlP6n2gpi8
+            # https://www.youtube.com/shorts/<watch_id>
             vid_id = extract_watch_id(url)
             # Right now, exception handling isn't implemented so no need to take just watch id
             # if vid_id == None:
@@ -333,6 +334,10 @@ def data_scrape(url, api_key=None, channel_dump=False, wayback=False, only_chann
         if only_channel == True:
             custom_url = extract_channel_name(url)
             dict_vals = {}
+
+            dir_path = Path(f'./{custom_url}')
+            if not dir_path.exists():
+                dir_path.mkdir()
         
         if channel_dump == True:
             print("Channel Dumping started...")
@@ -356,9 +361,9 @@ def data_scrape(url, api_key=None, channel_dump=False, wayback=False, only_chann
                 sorted_videos_list[idx]['video_number'] = str(idx + 1) 
 
             print("Now creating docx report of the channel")            
-            reportme("libs/ch_template.docx",f"Channel{custom_url}.docx",dict_vals, {0:image_path2},sorted_videos_list)
+            reportme("libs/ch_template.docx",f"./{custom_url}/Channel{custom_url}.docx",dict_vals, {0:image_path2},sorted_videos_list)
             print("completed channel report")
-            channel_doc_hash = calculate_md5(f"Channel{custom_url}.docx")
+            channel_doc_hash = calculate_md5(f"./{custom_url}/Channel{custom_url}.docx")
             hashfile_content += f"Channel{custom_url}.docx: {channel_doc_hash}\n"
             # document = Document()
             # # Load a Word DOCX file
@@ -370,18 +375,34 @@ def data_scrape(url, api_key=None, channel_dump=False, wayback=False, only_chann
 
             # convert(f"Channel{custom_url}.docx", f"Channel{custom_url}.pdf")
             # os.remove(f"Channel{custom_url}.docx")
+            if bulk_vid_down == True:
+                print(f"Starting to download {len(sorted_videos_list)} videos{'.' if len(sorted_videos_list) <= 5 else ', Please be patient as it might take a lot of time.'}")
+                dir_path = Path(f'./{custom_url}/videos')
+                if not dir_path.exists():
+                    dir_path.mkdir()
 
-        write_md5_to_file(f"Channel{custom_url}", hashfile_content)
+                for video in tqdm(sorted_videos_list, desc="Downloading Channel Videos"):
+                    # Checks for already downloaded videos so it can continue where the downloading left/discontinued
+                    result = any(video["video_id"] in file_name for file_name in os.listdir(dir_path))
+                    # if not Path(f'./{custom_url}/videos/{video["video_name"]} [{video["video_id"]}].mp4').exists():
+                    if not result:
+                        download_video(video['video_url'],f'./{custom_url}/videos')
+
+                print(f"All {len(sorted_videos_list)} videos downloaded successfully")
+                    
+
+        write_md5_to_file(f"./{custom_url}/Channel{custom_url}", hashfile_content)
         
         shutil.rmtree(temp_dir2)
 
 if __name__ == "__main__":
 
     global youtube
+    # expired key
     youtube = build('youtube', 'v3', developerKey="AIzaSyCn91JPROinHSEw08zrWpJIshxnGpoOSI4")
 
-    video_id = 'lAjQr0Zq_zA'  # Replace with the ID of the video you want to scrape
-    channel_id = "UCPf_eR-5vP-PDHpc9s7AFuQ"
+    video_id = '<watch-id>'  # Replace with the ID of the video you want to scrape
+    channel_id = "<channel-id>" # Replace with the ID of the channel you want to scrape
     test  = get_video_comments(video_id)
     pprint(test)
     

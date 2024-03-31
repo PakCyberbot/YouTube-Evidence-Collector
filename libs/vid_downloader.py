@@ -1,9 +1,10 @@
-import sys, re
+import sys, re, shutil
 from pytube import YouTube
 import os
 import subprocess
 import yt_dlp
-
+import json
+from pathlib import Path
 
 #-------------------- YOUTUBE Interaction --------------------------------
 def extract_watch_id(link):
@@ -39,7 +40,7 @@ def bytes_to_megabytes(bytes_size):
     megabytes_size = bytes_size / (1024 ** 2)
     return megabytes_size
 
-def download_video(video_url, output_path, GuiWorkerThread = None):
+def download_video(video_url, output_path="./", GuiWorkerThread = None):
     """
     video url or watch id
     """
@@ -72,13 +73,22 @@ def download_video(video_url, output_path, GuiWorkerThread = None):
         # stream.download(output_path=output_path, filename=f"{cleaned_filename}.mp4")
         
         #---------------------------- New Downloader --------------------------------
-        ydl_opts = {}
+        ydl_opts = {
+            'format': 'mp4/bestaudio/best'
+        }
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(video_url, download=True)
-
+            with open('check.json', 'w') as f:
+                json.dump(ydl.sanitize_info(info), f, indent=4)
             yttitle  = ydl.sanitize_info(info)['title']
+            ytid = ydl.sanitize_info(info)['id']
             total_size = int(ydl.sanitize_info(info)['filesize_approx'])
 
+        # debug
+        print(f'filename moving {yttitle} [{ytid}].mp4')
+        if not output_path == './':
+            matching_file = next((file for file in Path('./').iterdir() if file.is_file() and ytid in file.name), None)
+            shutil.move(str(matching_file),output_path)
 
         mb_size = f"{total_size / (1024 * 1024):.2f}"
         print(f"Video '{yttitle}' has been downloaded")
