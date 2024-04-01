@@ -11,6 +11,7 @@
 - [Table of Contents](#table-of-contents)
   - [Installation](#installation)
   - [Features](#features)
+          - [\[**NEW**\]](#new)
       - [Upcoming Features](#upcoming-features)
   - [Setting Up Your YouTube API Key](#setting-up-your-youtube-api-key)
     - [Input Methods for Your API Key](#input-methods-for-your-api-key)
@@ -32,9 +33,10 @@ pip install -r requirements.txt
 - Collects data about all videos in a channel
 - Takes snapshots of videos/channels in the Wayback Machine
 - Generates a DOCX file with the collected data
-- Ability to download age-restricted videos \[**NEW**\]
-- Bulk video download during channel dump \[**NEW**\]
-  
+###### \[**NEW**\]
+- Ability to download age-restricted videos 
+- Bulk video download during channel dump 
+- Generates an HTML webpage for improved navigation of dumped channel videos. 
 
 #### Upcoming Features
 - Collect comments for videos

@@ -9,6 +9,7 @@ import locale
 import hashlib
 from tqdm import tqdm
 from pathlib import Path
+from bs4 import BeautifulSoup
 
 
 # from docx2pdf import convert
@@ -102,7 +103,6 @@ async def take_screenshot(url, screenshot_path):
 # Set up the YouTube Data API client
 # https://googleapis.github.io/google-api-python-client/docs/dyn/youtube_v3.html
 def api_init(secret, gui_statusbar=None):
-# 'AIzaSyCn91JPROinHSEw08zrWpJIshxnGpoOSI4'
     global api_key
     api_key =  secret # Replace with your API key
     global youtube
@@ -110,24 +110,31 @@ def api_init(secret, gui_statusbar=None):
 
     global gui_status
     gui_status = gui_statusbar
-def download_image(url):
+def download_image(url, location=None):
     try:
         # Send a GET request to the URL
         response = requests.get(url)
         response.raise_for_status()  # Raise an exception for 4xx and 5xx status codes
 
-        # Create a temporary directory
-        temp_dir = tempfile.mkdtemp()
+        if location is None:
+            # Create a temporary directory
+            temp_dir = tempfile.mkdtemp()
 
-        # Create a temporary file to save the image
-        temp_file_path = os.path.join(temp_dir, 'image.jpg')
+            # Create a temporary file to save the image
+            temp_file_path = os.path.join(temp_dir, 'image.jpg')
 
-        # Write the image content to the temporary file
-        with open(temp_file_path, 'wb') as f:
-            f.write(response.content)
+            # Write the image content to the temporary file
+            with open(temp_file_path, 'wb') as f:
+                f.write(response.content)
 
-        # Return the path of the downloaded image and the temporary directory
-        return temp_file_path, temp_dir
+            # Return the path of the downloaded image and the temporary directory
+            return temp_file_path, temp_dir
+        else:
+            with open(location, 'wb') as f:
+                f.write(response.content)
+
+            return None, None
+        
     except requests.exceptions.RequestException as e:
         print("Error downloading image:", e)
         return None, None
@@ -150,7 +157,7 @@ def scrape_video_info(video_id):
         "video_tags": ", ".join(check["snippet"].get("tags", ["NOT AVAILABLE"])),
 
         "views": "{:,}".format(int(check["statistics"]["viewCount"])),
-        "likes": "{:,}".format(int(check["statistics"].get("likeCount","HIDDEN"))),
+        "likes": "{:,}".format(int(check["statistics"].get("likeCount","-1"))),
         "comments": "{:,}".format(int(check["statistics"].get("commentCount","0"))),
 
         "thumbnails": check["snippet"]["thumbnails"]["high"]["url"],
@@ -303,6 +310,7 @@ def data_scrape(url, api_key=None, channel_dump=False, wayback=False, only_chann
 
             image_path, temp_dir = download_image(dict_vals['thumbnails'])
             image_path2, temp_dir2 = download_image(dict_vals['channel_logo'])
+            print('1. tempdir2 ', temp_dir2)
 
             if wayback:
                 # captures the video snapshot in wayback machine at the time of scraping
@@ -335,17 +343,19 @@ def data_scrape(url, api_key=None, channel_dump=False, wayback=False, only_chann
             custom_url = extract_channel_name(url)
             dict_vals = {}
 
-            dir_path = Path(f'./{custom_url}')
-            if not dir_path.exists():
-                dir_path.mkdir()
+            
         
         if channel_dump == True:
+            vids_dir_path = Path(f'./{custom_url}')
+            if not vids_dir_path.exists():
+                vids_dir_path.mkdir()
             print("Channel Dumping started...")
             if only_channel == True:
                 channel_id, videos_array = list_channel_videos(custom_url)
                 dict_vals.update(scrape_channel_info(channel_id))
                 dict_vals.update({"channel_id":channel_id})
                 image_path2, temp_dir2 = download_image(dict_vals['channel_logo'])
+                print('2. tempdir2 ', temp_dir2)
             else:
                 _, videos_array = list_channel_videos(dict_vals["channel_id"])
 
@@ -377,23 +387,119 @@ def data_scrape(url, api_key=None, channel_dump=False, wayback=False, only_chann
             # os.remove(f"Channel{custom_url}.docx")
             if bulk_vid_down == True:
                 print(f"Starting to download {len(sorted_videos_list)} videos{'.' if len(sorted_videos_list) <= 5 else ', Please be patient as it might take a lot of time.'}")
-                dir_path = Path(f'./{custom_url}/videos')
-                if not dir_path.exists():
-                    dir_path.mkdir()
+                vids_dir_path = Path(f'./{custom_url}/videos')
+                if not vids_dir_path.exists():
+                    vids_dir_path.mkdir()
+                pages_dir_path = Path(f'./{custom_url}/pages')
+                if not pages_dir_path.exists():
+                    pages_dir_path.mkdir()
+                try:
+                    for video in tqdm(sorted_videos_list, desc="Downloading Channel Videos"):
+                        # Checks for already downloaded videos so it can continue where the downloading left/discontinued
+                        result = any(video["video_id"] in file_name for file_name in os.listdir(vids_dir_path))
+                        # if not Path(f'./{custom_url}/videos/{video["video_name"]} [{video["video_id"]}].mp4').exists():
+                        if not result:
+                            download_video(video['video_url'],f'./{custom_url}/videos')
+                except Exception as e:
+                    None
 
-                for video in tqdm(sorted_videos_list, desc="Downloading Channel Videos"):
-                    # Checks for already downloaded videos so it can continue where the downloading left/discontinued
-                    result = any(video["video_id"] in file_name for file_name in os.listdir(dir_path))
-                    # if not Path(f'./{custom_url}/videos/{video["video_name"]} [{video["video_id"]}].mp4').exists():
-                    if not result:
-                        download_video(video['video_url'],f'./{custom_url}/videos')
+                if len(os.listdir(vids_dir_path)) < len(sorted_videos_list):
+                    print(f"{len(sorted_videos_list) - len(os.listdir(vids_dir_path))} videos failed to download")
+                    print("Restart scraping of the same channel; failed videos will be attempted for download again")
+                else:
+                    print(f"All {len(sorted_videos_list)} videos downloaded successfully")
+                
+                # Generating youtube clone webpage for better visualization of videos
+                # shutil.copytree('./libs/web_template', f'./{custom_url}/')
+                source_directory = './libs/web_template'
+                destination_directory = f'./{custom_url}/'
+                contents = os.listdir(source_directory)
+                try:
+                    # Move each item in the source directory to the destination directory
+                    for item in contents:
+                        if 'video.html' in item:
+                            continue 
+                        source_path = os.path.join(source_directory, item)
+                        destination_path = os.path.join(destination_directory, item)
+                        if os.path.isdir(source_path):
+                            shutil.copytree(source_path, destination_path)
+                        else:
+                            shutil.copy(source_path, destination_path)
+                except Exception as e:
+                    print(e)
+                    print("File already exists")
 
-                print(f"All {len(sorted_videos_list)} videos downloaded successfully")
+                print("Generating HTML file for easier visualization of downloaded videos...")
+                
+                with open(f'./libs/web_template/video.html', 'r') as f:
+                    vid_html_content = f.read()
+                video_soup = BeautifulSoup(vid_html_content, 'html.parser')
+
+                with open(f'./{custom_url}/index.html', 'r') as f:
+                    html_content = f.read()
+
+                soup = BeautifulSoup(html_content, 'html.parser')
+                # placing data in placeholders
+                placeholders = {
+                    '[channel_name]': dict_vals['channel_name'],
+                    '[custom_url]': dict_vals['custom_url'],
+                    '[sub_count]': dict_vals['channel_subs'],
+                    '[channel_description]': dict_vals['channel_description']
+                }
+
+                # Replace placeholders in the entire HTML content
+                html_text = str(soup)  # Get the HTML content as text
+                for placeholder, replacement in placeholders.items():
+                    html_text = html_text.replace(placeholder, replacement)
+                
+                soup = BeautifulSoup(html_text, 'html.parser')
+
+                # placing channel logo
+                shutil.copy(image_path2, f'{custom_url}/images/channel_logo.png')
+                
+                div_tag = soup.find('div', class_='list-container')
+                # Adding videos sorted by time
+                for video in sorted_videos_list:
+                    matching_file = next((file for file in Path(vids_dir_path).iterdir() if file.is_file() and video['video_id'] in file.name), None)
+
+                    # setting up for individual video page
+                    vid_placeholders = {
+                    '[channel_name]': dict_vals['channel_name'],
+                    '[sub_count]': dict_vals['channel_subs'],
+                    '[video_name]': video['video_name'],
+                    '[video_description]': video['video_description'],
+                    '[video_file]': os.path.basename(matching_file),
+                    '[video_id]': video['video_id'],
+                    '[video_views]': video['views'],
+                    '[video_likes]': video['likes'],
+                    '[video_published_date]': video['published_date'],
+                    '[video_description]': video['video_description'],
+                    '[thumbnail]': f'{video["video_id"]}.jpg'
+                    }
+                    video_html = str(video_soup)
+                    for placeholder, replacement in vid_placeholders.items():
+                        video_html = video_html.replace(placeholder, replacement)
+                    with open(f'{custom_url}/pages/{video["video_id"]}.html', 'w',encoding='utf-8') as fh:
+                        fh.write(video_html)
+
+                    # setting up for index.html
+                    download_image(video['Picture'],f'{custom_url}/images/{video["video_id"]}.jpg')
                     
+                    
+                    
+                    # Write content inside the <div> tag
+                    div_tag.append(BeautifulSoup(f'<div class="vid-list"><a href="pages/{video["video_id"]}.html"><div class="video"><video class="thevideo" loop muted poster="images/{video["video_id"]}.jpg"><source src="videos/{str(os.path.basename(matching_file))}" type="video/mp4"></video></div></a><div class="flex-div"><img src="images/channel_logo.png" alt=""><div class="vid-info"><a href="">{video["video_name"]}</a><p>{dict_vals["channel_name"]}</p><p>{str(video["views"])} Views &bull; {str(video["published_date"])}</p></div></div></div>', 'html.parser'))
 
-        write_md5_to_file(f"./{custom_url}/Channel{custom_url}", hashfile_content)
+                with open(f'./{custom_url}/index.html', 'w',encoding='utf-8') as file:
+                    file.write(str(soup.prettify()))
+                    print("HTML generated successfully")
+
+            write_md5_to_file(f"./{custom_url}/Channel{custom_url}", hashfile_content)
         
         shutil.rmtree(temp_dir2)
+
+def html_vidlist_gen():
+    None
 
 if __name__ == "__main__":
 

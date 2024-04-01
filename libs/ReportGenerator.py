@@ -181,7 +181,7 @@ def reportme(tmpl_path,out_path,data_dict, img_dict=None, array=None):
                 extracted_data = matches[0].strip(r"%array%").strip(r"%/array%")
                 new_data = ""
                 for i, dict_data in enumerate(array):
-                    img_url = dict_data.pop('Picture', None)
+                    img_url = dict_data.get('Picture', None)
                     if img_url is not None:
                         new_data += substitute_values(adding_an_image(temp_dir, img_url, i, extracted_data), dict_data)
                     else:

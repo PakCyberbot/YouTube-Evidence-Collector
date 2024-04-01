@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>[video_name]</title>
+    <!-- CSS sheet link  -->
+    <link rel="stylesheet" href="../style.css">
+    <!-- box icons -->
+    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+</head>
+
+<body>
+
+    <!-- Navbar -->
+    <nav class="flex-div">
+        <!-- Logo image & Menu Icon -->
+        <div class="nav-left flex-div">
+            <!-- <img src="images/logo-dark.png" alt="" class="menu-icon"> -->
+            <a href="../index.html"><img src="../images/logo-light.png" alt="" class="logo"></a>
+        </div>
+
+        <div class="nav-right">
+            <div class="bx bx-moon" id="darkMode-icon"></div>
+            <a href="../index.html"><img src="../images/channel_logo.png" alt="" class="user-icon"></a>
+
+     </nav>
+
+     <!-- Container -->
+    <div class="container play-container">
+
+        <!-- Playing Video Container  -->
+        <div class="row">
+            <div class="play-video">
+                <video controls autoplay poster="../images/[thumbnail]">
+                    <source src="../videos/[video_file]" type="video/mp4">
+                </video>
+
+                <h3 style="margin-top: 15px; margin-bottom: 15px;"> [video_name]</h3>
+
+                <div class="play-video-info">
+                    
+                    <div>
+                        <a href=""><img src="../images/like.png" alt="">[video_likes]</a>
+                        <a href="https://www.youtube.com/watch?v=[video_id]"><img src="../images/share.png" alt="">Share</a>
+                    </div>
+                </div>
+                <hr>
+
+                <!-- Channel name and pic  -->
+                <div class="channel">
+                    <div class="publisher">
+                        <a href="../index.html">
+                            <img src="../images/channel_logo.png" alt="">
+                        </a>
+                        <div>
+                            <p>[channel_name]</p>
+                            <span>[sub_count]</span>
+                        </div>
+                        
+                    </div>
+                </div>
+
+                <div class="vid-description" style="padding:15px">
+                    <p>[video_views] Views &bull; [video_published_date]</p>
+                    [video_description]
+                </div>
+
+            </div>
+
+        
+        </div>
+    </div>
+    <!-- Footer section -->
+    <div class="footer">
+        Tool created by <a href="https://github.com/PakCyberbot">PakCyberbot</a> 
+        <br><br>
+        <a href="https://www.buymeacoffee.com/pakcyberbot"> Donate to support for more projects </a>
+    </div>
+
+    <!-- Scripts -->
+    <script src="../script.js"></script>
+
+    <script src="https://cpwebassets.codepen.io/assets/common/stopExecutionOnTimeout-1b93190375e9ccc259df3a57c1abc0e64599724ae30d7ea4c6877eb615f89387.js"></script>
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.3/jquery.min.js'></script>
+
+<script id="rendered-js">
+    var figure = $(".video").hover(hoverVideo, hideVideo);
+
+    function hoverVideo(e) {
+        $('video', this).get(0).play();
+    }
+
+    function hideVideo(e) {
+        $('video', this).get(0).pause();
+    }
+    //# sourceURL=pen.js
+</script>
+
+</body>
+
+</html>
