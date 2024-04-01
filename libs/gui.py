@@ -100,7 +100,7 @@ class MainWindow(QMainWindow):
         self.evdnce_chkbx.setFont(font)
         self.chdump_chkbox = QCheckBox("Channel Dump")
         self.chdump_chkbox.setFont(font)
-        self.viddown_chkbox = QCheckBox("Video/s Download")
+        self.viddown_chkbox = QCheckBox("Video Download")
         self.viddown_chkbox.setFont(font)
         self.viddown_chkbox.setChecked(True)
         self.wayback_chkbox = QCheckBox("Wayback Snapshot")

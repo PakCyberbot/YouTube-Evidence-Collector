@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="images/favicon.ico" type="image/x-icon">
+
+    <link rel="stylesheet" href="style.css">
+    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+
+    <title>[channel_name]</title>
+</head>
+<body>
+
+     <nav class="flex-div">
+        <div class="nav-left flex-div">
+            <a href="index.html">
+                <img src="images/logo-light.png" alt="" class="logo">
+            </a>
+        </div>
+
+        <div class="nav-right">
+            <div class="bx bx-moon" id="darkMode-icon"></div>
+            <a href="index.html"><img src="images/channel_logo.png" alt="" class="user-icon"></a>
+            
+        </div>
+     </nav>
+
+     <!-- ------main------------- -->
+
+     <div class="container">
+        <div class="banner">
+            <img src="images/banner.png" alt="">
+            
+        </div>
+        <div class="banner-profile">
+            <img src="images/channel_logo.png" alt="" style="margin: 10px">
+            <div class="profile-content">
+                <h3 style="margin-bottom: 5px;">[channel_name]</h3>
+                <p>[custom_url] </p><p> [sub_count] subscribers</p> <p>[channel_description]</p>
+            </div>
+        </div>
+        <br>
+        <!-- <div class="profile-links">
+            <a href="#">Home</a>
+            <a href="#">Videos</a>
+            <a href="#">PlayLists</a>
+            <a href="#">Channels</a>
+            <a href="#">About</a>
+            
+        </div> -->
+        <br>
+        <hr>
+        <br>
+        
+            
+     
+     <div class="list-container">
+        <!-- videos -->
+        
+
+        <!-- <div class="vid-list">
+            <a href="play-video.html">
+                
+                <div class="video">
+                        <video class="thevideo" loop muted poster="[thumbnail]">
+                            <source src="videos/[video_file]" type="video/mp4">
+                        </video>
+                </div>
+            </a>
+
+            <div class="flex-div">
+                <img src="images/channel_logo.png" alt="">
+
+                <div class="vid-info">
+                    <a href="">[video_title]</a>
+                    <p>[channel_name]</p>
+                    <p>[video_views] Views &bull; [video_published_date]</p>
+                </div>
+            </div>
+        </div> -->
+
+        
+     </div>
+     
+
+</div>
+<!-- Footer section -->
+<div class="footer">
+    Tool created by <a href="https://github.com/PakCyberbot">PakCyberbot</a> 
+    <br><br>
+    <a href="https://www.buymeacoffee.com/pakcyberbot"> Donate to support for more projects </a>
+</div>
+<!-- ---------- Script -------- -->
+
+<script src="script.js"></script>
+
+<script src="https://cpwebassets.codepen.io/assets/common/stopExecutionOnTimeout-1b93190375e9ccc259df3a57c1abc0e64599724ae30d7ea4c6877eb615f89387.js"></script>
+<script src='https://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.3/jquery.min.js'></script>
+
+<script id="rendered-js">
+    var figure = $(".video").hover(hoverVideo, hideVideo);
+
+    function hoverVideo(e) {
+        $('video', this).get(0).play();
+    }
+
+    function hideVideo(e) {
+        $('video', this).get(0).pause();
+    }
+    //# sourceURL=pen.js
+</script>
+
+</body>
+</html>
